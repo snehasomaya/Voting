@@ -1,0 +1,187 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+
+```{r}
+library(plm)
+library(ggplot2)
+library(stargazer)
+install.packages("olsrr")
+library(olsrr)
+```
+
+```{r}
+vote = read.csv("/Users/snehas/Downloads/votedata.csv")
+colnames(vote)
+votenew = vote[-c(1,12,13,14)]
+votenew
+```
+
+SIMPLE REGRESSIONS
+```{r}
+#RACE
+reg1 = plm(X..Registered ~ X..White, data = votenew, model='pooling')
+summary(reg1)
+
+reg1b = plm(X..Registered ~ X..Black, data = votenew, model='pooling')
+summary(reg1b)
+```
+```{r}
+#plots
+votenew$resb = residuals(reg1b)
+ggplot(votenew, aes(x=X..Black, y=resb)) + geom_point() + xlab("% Black Voters") + ylab("Residuals")
+```
+
+
+```{r}
+stargazer(reg1, reg1b,
+          type="html",
+          out="E140projrace.doc", 
+          title="Results",
+          dep.var.labels=c("% of registered voters in CA"),
+          covariate.labels=c("White", "Black"),
+          notes.append = F,
+          star.char = c("+", "*", "**", "***"),
+          star.cutoffs = c(.1, .05, .01, .001),
+          notes = c("* Significant at the 10% level",
+                    "** Significant at the 5% level",
+                    "*** Significant at the 1% level",
+                    "+ Significant at the 10% level"),
+          omit.stat = c("ser"),
+          align=TRUE)
+```
+
+```{r}
+#AGE
+reg2 = plm(X..Registered ~ Median_age_total, data = votenew, model='pooling')
+summary(reg2)
+
+votenew$resage = residuals(reg2)
+ggplot(votenew, aes(x=Median_age_total, y=resage)) + 
+    geom_point() + xlab("Median Age") + ylab("Residuals")
+```
+
+```{r}
+#INCOME
+reg3 = plm(X..Registered ~ Median_income, data = votenew, model='pooling')
+summary(reg3)
+
+votenew$resincome = residuals(reg3)
+ggplot(votenew, aes(x=Median_income, y=resincome)) + 
+    geom_point() + xlab("Median Income") + ylab("Residuals")
+```
+
+```{r}
+stargazer(reg2, reg3,
+          type="html",
+          out="E140projageincome.doc", 
+          title="Results",
+          dep.var.labels=c("% of registered voters in CA"),
+          covariate.labels=c("Median Age", "Median Income"),
+          notes.append = F,
+          star.char = c("+", "*", "**", "***"),
+          star.cutoffs = c(.1, .05, .01, .001),
+          notes = c("* Significant at the 10% level",
+                    "** Significant at the 5% level",
+                    "*** Significant at the 1% level",
+                    "+ Significant at the 10% level"),
+          omit.stat = c("ser"),
+          align=TRUE)
+```
+
+
+```{r}
+#PARTY
+reg4 = plm(X..Registered ~ X..Democratic, data = votenew, model='pooling')
+summary(reg4)
+
+reg4b = plm(X..Registered ~ +X..Republican, data = votenew, model='pooling')
+summary(reg4b)
+
+reg4c = plm(X..Registered ~ +X..Other, data = votenew, model='pooling')
+summary(reg4c)
+```
+
+```{r}
+
+votenew$resdem = residuals(reg4)
+ggplot(votenew, aes(x=X..Democratic, y=resdem)) + 
+    geom_point()
+
+votenew$resrep = residuals(reg4b)
+ggplot(votenew, aes(x=X..Republican, y=resrep)) + 
+    geom_point() + xlab("% of Republican Voters") + ylab("Residuals")
+
+votenew$resoth = residuals(reg4c)
+ggplot(votenew, aes(x=X..Other, y=resoth)) + 
+    geom_point()
+```
+
+
+```{r}
+stargazer(reg4, reg4b, reg4c,
+          type="html",
+          out="E140projparty.doc", 
+          title="Results",
+          dep.var.labels=c("% of registered voters in CA"),
+          covariate.labels=c("Democratic", "Republican", "Other"),
+          notes.append = F,
+          star.char = c("+", "*", "**", "***"),
+          star.cutoffs = c(.1, .05, .01, .001),
+          notes = c("* Significant at the 10% level",
+                    "** Significant at the 5% level",
+                    "*** Significant at the 1% level",
+                    "+ Significant at the 10% level"),
+          omit.stat = c("ser"),
+          align=TRUE)
+```
+
+MLR MODELS
+
+```{r}
+#All
+reg6 = plm(X..Registered ~ X..Black+X..Republican+Median_age_total+Median_income+factor(Region), model = 'pooling',data = votenew)
+summary(reg6)
+```
+
+
+```{r}
+#Breusch Pagan
+u_hat <- resid(reg6) 
+res2 = u_hat*u_hat
+votenew$residual2 = res2
+
+regbp = plm(res2 ~ X..Black+X..Republican+Median_age_total+Median_income+factor(Region), model = 'pooling', data = votenew)
+summary(regbp)
+```
+
+```{r}
+#table form 
+stargazer(reg6,
+          type="html",
+          out="E140proj.doc", 
+          title="Results",
+          #dep.var.labels=c("% of registered voters in CA"),
+          #covariate.labels=c("White", "Black", "Median Income","Median Age", "Democrat",),
+          notes.append = F,
+          star.char = c("+", "*", "**", "***"),
+          star.cutoffs = c(.1, .05, .01, .001),
+          notes = c("* Significant at the 10% level",
+                    "** Significant at the 5% level",
+                    "*** Significant at the 1% level",
+                    "+ Significant at the 10% level"),
+          omit.stat = c("ser"),
+          align=TRUE)
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file). 
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+
